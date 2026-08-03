@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // Language + runtime: what Node 24 actually supports
+    "target": "es2024",
+    "lib": ["es2024"],
+
+    // Real Node ESM resolution — reads package.json "exports", requires
+    // explicit file extensions, matches how Node itself resolves imports
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+
+    // TS 6.0 defaults `types` to [] — opt into Node globals explicitly
+    "types": ["node"],
+
+    // The locked decision: strict everywhere
+    "strict": true,
+
+    // Imports/exports mean exactly what they say — no invisible rewriting;
+    // type-only imports must say `import type`
+    "verbatimModuleSyntax": true,
+
+    // Only TS syntax that can be erased to JS — no enums, no namespaces.
+    // Keeps every file runnable by strip-types tools (and Node itself)
+    "erasableSyntaxOnly": true,
+
+    // Interop + hygiene
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    // Phase 1 packages only typecheck; emitting is a later concern
+    "noEmit": true
+  }
+}
