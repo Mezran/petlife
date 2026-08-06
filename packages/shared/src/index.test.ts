@@ -4,7 +4,7 @@ import { APP_NAME } from "@petlife/shared";
 
 describe("@petlife/shared public surface", () => {
   it("exports the app name", () => {
-    expect(APP_NAME).toBe("PetLife");
+    expect(APP_NAME).toBe("Some Wrong Name");
   });
 
   it("keeps the name a non-empty string", () => {
