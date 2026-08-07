@@ -30,3 +30,18 @@ src/
 - **app/index split.** `createApp()` builds the whole app without listening, so tests (4.3, Supertest) can exercise real routes without a port. `index.ts` binds the port and nothing more.
 - **Body parsing.** `express.json()` is app-level in `createApp()`, before all routers — every route sees `req.body` already parsed.
 - **Config.** The port is hard-coded until 2.2's validated config module, which will become the only place that reads `process.env`.
+
+## Configuration
+
+All configuration arrives as environment variables and is validated once, at
+boot, by `src/config.ts`. Nothing else in the app reads `process.env`.
+
+- `.env.example` is committed and lists every variable the app needs.
+- `.env` is local, git-ignored, and loaded by Node itself (`--env-file-if-exists` in the `dev` script) — there is no dotenv dependency.
+- Real environment variables take precedence over `.env` values, so `PORT=4001 pnpm dev` works without editing the file.
+- A missing or malformed variable fails the boot with a readable message and exit code 1, rather than surfacing as a confusing runtime bug later.
+
+| Variable   | Required | Default       | Notes                                   |
+| ---------- | -------- | ------------- | --------------------------------------- |
+| `NODE_ENV` | no       | `development` | `development` \| `test` \| `production` |
+| `PORT`     | yes      | —             | integer, 1–65535                        |
