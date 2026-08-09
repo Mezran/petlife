@@ -7,7 +7,7 @@ export const logger = pino({
   redact: [
     "req.headers.authorization",
     "req.headers.cookie",
-    'res.jeaders["set-cookie"]',
+    'res.headers["set-cookie"]',
   ],
   transport: config.isDevelopment ? { target: "pino-pretty" } : undefined,
 });
