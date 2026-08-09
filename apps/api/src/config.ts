@@ -6,6 +6,9 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65535),
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+    .optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -24,6 +27,13 @@ const env = parsed.data;
 export const config = Object.freeze({
   nodeEnv: env.NODE_ENV,
   port: env.PORT,
+  logLevel:
+    env.LOG_LEVEL ??
+    (env.NODE_ENV === "test"
+      ? "silent"
+      : env.NODE_ENV === "development"
+        ? "debug"
+        : "info"),
   isDevelopment: env.NODE_ENV === "development",
   isTest: env.NODE_ENV === "test",
   isProduction: env.NODE_ENV === "production",
