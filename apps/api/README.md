@@ -41,7 +41,17 @@ boot, by `src/config.ts`. Nothing else in the app reads `process.env`.
 - Real environment variables take precedence over `.env` values, so `PORT=4001 pnpm dev` works without editing the file.
 - A missing or malformed variable fails the boot with a readable message and exit code 1, rather than surfacing as a confusing runtime bug later.
 
-| Variable   | Required | Default       | Notes                                   |
-| ---------- | -------- | ------------- | --------------------------------------- |
-| `NODE_ENV` | no       | `development` | `development` \| `test` \| `production` |
-| `PORT`     | yes      | —             | integer, 1–65535                        |
+| Variable    | Required | Default       | Notes                                                     |
+| ----------- | -------- | ------------- | --------------------------------------------------------- |
+| `NODE_ENV`  | no       | `development` | `development` \| `test` \| `production`                   |
+| `PORT`      | yes      | —             | integer, 1–65535                                          |
+| `LOG_LEVEL` | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info` |
+
+## Logging
+
+Structured JSON logs via pino; pretty-printed in development, raw JSON in
+production. pino-http emits one line per completed request with the request id, status code, and latency.
+
+- Every request carries a correlation id: an inbound `X-Request-Id` is honored, otherwise a UUID is minted; the id is echoed on the response and appears on the request's log line.
+- Sensitive fields (`authorization`, `cookie`, `set-cookie` headers) are redacted at the logger, so no call site can leak them — they print as `[Redacted]`.
+- The level comes from `config.logLevel`: `LOG_LEVEL` if set, otherwise by environment (development→`debug`, test→`silent`, production→`info`).
