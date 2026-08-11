@@ -67,3 +67,10 @@ Every failure — thrown, rejected, or passed to `next(err)` — is rendered by 
 - Every problem carries `requestId` — quote it from a response, filter the logs by it, and the request's whole story (including any stack) is there.
 - **Crash policy** (`src/index.ts`): `uncaughtException` / an `unhandledRejection` outside a handler logs at `fatal` and exits 1 — the supervisor restarts a clean process. Orderly shutdown arrives in 2.5.
 - Dev-only routes under `/api/v1/debug` exercise each path end to end; they are not mounted outside development.
+
+## Health & lifecycle
+
+- `GET /healthz` — liveness: is the process up. Always `{"status":"ok"}` while the event loop can answer. A failing liveness check means "restart me."
+- `GET /readyz` — readiness: should traffic be routed here. `ready` once listening; `503 {"status":"draining"}` during boot and shutdown. A failing readiness check means "skip me, I'm not dead." Gains a DB ping at 3.3.
+- Both live at the app root (infra convention) and mount before the logging middleware, so probe heartbeats don't flood the request log.
+- **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.

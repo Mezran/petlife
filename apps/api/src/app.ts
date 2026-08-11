@@ -12,10 +12,14 @@ import { errorHandler } from "./middleware/error-handler.ts";
 // import routers
 import { pingRouter } from "./api/ping/ping.router.ts";
 import { debugRouter } from "./api/debug/debug.router.ts";
+import { healthRouter } from "./api/health/health.router.ts";
 
 export const createApp = (): Express => {
   // app init
   const app = express();
+
+  // infrastructure endpoints
+  app.use(healthRouter);
 
   // middlewares
   app.use(requestId);

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as z from "zod";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { AppError } from "../../errors.ts";
 
@@ -26,4 +27,9 @@ const validateQuery = z.object({
 debugRouter.get("/validate", (req, res) => {
   const query = validateQuery.parse(req.query);
   res.json({ ok: true, query });
+});
+
+debugRouter.get("/slow", async (_req, res) => {
+  await delay(15000);
+  res.json({ ok: true, tookMS: 15000 });
 });
