@@ -1,11 +1,17 @@
 import express, { type Express } from "express";
 
+// config
+import { config } from "./config.ts";
+
 // middlewares
 import { requestId } from "./middleware/request-id.ts";
 import { httpLogger } from "./middleware/http-logger.ts";
+import { notFound } from "./middleware/not-found.ts";
+import { errorHandler } from "./middleware/error-handler.ts";
 
 // import routers
 import { pingRouter } from "./api/ping/ping.router.ts";
+import { debugRouter } from "./api/debug/debug.router.ts";
 
 export const createApp = (): Express => {
   // app init
@@ -18,6 +24,16 @@ export const createApp = (): Express => {
 
   // api endpoints
   app.use("/api/v1", pingRouter);
+  if (config.isDevelopment) {
+    // exists only to exercise the error pipeline — never mounted in prod
+    app.use("/api/v1/debug", debugRouter);
+  }
+
+  // no route matched → a real 404 into the error pipeline
+  app.use(notFound);
+
+  // dead last: arity 4 marks it as the error handler
+  app.use(errorHandler);
 
   return app;
 };

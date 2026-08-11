@@ -55,3 +55,15 @@ production. pino-http emits one line per completed request with the request id, 
 - Every request carries a correlation id: an inbound `X-Request-Id` is honored, otherwise a UUID is minted; the id is echoed on the response and appears on the request's log line.
 - Sensitive fields (`authorization`, `cookie`, `set-cookie` headers) are redacted at the logger, so no call site can leak them — they print as `[Redacted]`.
 - The level comes from `config.logLevel`: `LOG_LEVEL` if set, otherwise by environment (development→`debug`, test→`silent`, production→`info`).
+
+## Errors
+
+Every failure — thrown, rejected, or passed to `next(err)` — is rendered by one error middleware as RFC 9457 `application/problem+json`.
+
+- **Operational errors** extend `AppError` (`src/errors.ts`): deliberate status, title, and client-safe detail. Throw them freely; Express 5 forwards async rejections to the error middleware natively.
+- **Programmer errors** (anything not an `AppError`) return a fixed 500 problem that reveals nothing; the full error and stack go to the logs at `error` level. Stack traces never appear in responses, in any mode.
+- **Zod validation failures** become 400s with a per-field `errors` member.
+- **404s** flow through the same pipeline via the `notFound` catch-all.
+- Every problem carries `requestId` — quote it from a response, filter the logs by it, and the request's whole story (including any stack) is there.
+- **Crash policy** (`src/index.ts`): `uncaughtException` / an `unhandledRejection` outside a handler logs at `fatal` and exits 1 — the supervisor restarts a clean process. Orderly shutdown arrives in 2.5.
+- Dev-only routes under `/api/v1/debug` exercise each path end to end; they are not mounted outside development.
