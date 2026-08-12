@@ -24,6 +24,7 @@ process.on("unhandledRejection", (reason) => {
 
 // app
 import { createApp } from "./app.ts";
+import { closeDb } from "./db/client.ts";
 const app = createApp();
 
 const server = app.listen(config.port, () => {
@@ -58,8 +59,15 @@ const shutdown = async (signal: string): Promise<void> => {
       logger.error({ err }, "error while closing server");
       process.exit(1);
     }
-    logger.info("server closed — exiting");
-    process.exit(0);
+    closeDb()
+      .then(() => {
+        logger.info("server and db pool closed — exiting");
+        process.exit(0);
+      })
+      .catch((closeErr: unknown) => {
+        logger.error({ err: closeErr }, "error while closing db pool");
+        process.exit(1);
+      });
   });
   server.closeIdleConnections();
 };
