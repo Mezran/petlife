@@ -9,6 +9,7 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .optional(),
+  DATABASE_URL: z.url({ protocol: /^postgresql$/ }),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -34,6 +35,7 @@ export const config = Object.freeze({
       : env.NODE_ENV === "development"
         ? "debug"
         : "info"),
+  databaseUrl: env.DATABASE_URL,
   isDevelopment: env.NODE_ENV === "development",
   isTest: env.NODE_ENV === "test",
   isProduction: env.NODE_ENV === "production",

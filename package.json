@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "pnpm --filter @petlife/api dev",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && pnpm db:up",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
