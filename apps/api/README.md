@@ -19,6 +19,8 @@ src/
 ├─ api/          # the HTTP surface — one folder per feature/api endpoint, a vertical
 │  └─ ping/      # slice each
 │     └─ ping.router.ts
+├─ db/           # the database boundary — pool + drizzle handle (client.ts),
+│                # schema.ts as the TS mirror of .docs/db/schema.sql
 └─ middleware/   # shared cross-cutting middleware (not created yet — 2.3
                  # adds it with request-id; errors follow in 2.4)
 ```
@@ -41,12 +43,12 @@ boot, by `src/config.ts`. Nothing else in the app reads `process.env`.
 - Real environment variables take precedence over `.env` values, so `PORT=4001 pnpm dev` works without editing the file.
 - A missing or malformed variable fails the boot with a readable message and exit code 1, rather than surfacing as a confusing runtime bug later.
 
-| Variable       | Required | Default       | Notes                                                                                |
-| -------------- | -------- | ------------- | ------------------------------------------------------------------------------------ |
-| `NODE_ENV`     | no       | `development` | `development` \| `test` \| `production`                                              |
-| `PORT`         | yes      | —             | integer, 1–65535                                                                     |
-| `LOG_LEVEL`    | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info`                            |
-| `DATABASE_URL` | yes      | —             | `postgresql://user:pass@host:port/db`; validated only until 3.3 wires up a real pool |
+| Variable       | Required | Default       | Notes                                                                                                                       |
+| -------------- | -------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`     | no       | `development` | `development` \| `test` \| `production`                                                                                     |
+| `PORT`         | yes      | —             | integer, 1–65535                                                                                                            |
+| `LOG_LEVEL`    | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info`                                                                   |
+| `DATABASE_URL` | yes      | —             | `postgresql://user:pass@host:port/db`; feeds the pg pool in `src/db/client.ts` — `/readyz` proves it with a live round-trip |
 
 ## Logging
 
@@ -71,10 +73,10 @@ Every failure — thrown, rejected, or passed to `next(err)` — is rendered by 
 
 ## Health & lifecycle
 
-- `GET /healthz` — liveness: is the process up. Always `{"status":"ok"}` while the event loop can answer. A failing liveness check means "restart me."
+- `GET /readyz` — readiness: should traffic be routed here. `503 {"status":"draining"}` during boot and shutdown; once listening, every poll also pings the database — `{"status":"ready","db":"ok"}`, or `503 {"status":"unready","db":"unreachable"}` when Postgres can't answer. A failing readiness check means "skip me, I'm not dead."
 - `GET /readyz` — readiness: should traffic be routed here. `ready` once listening; `503 {"status":"draining"}` during boot and shutdown. A failing readiness check means "skip me, I'm not dead." Gains a DB ping at 3.3.
 - Both live at the app root (infra convention) and mount before the logging middleware, so probe heartbeats don't flood the request log.
-- **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.
+- **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → db pool closes → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.
 
 ## Local development
 
