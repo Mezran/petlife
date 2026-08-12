@@ -41,11 +41,12 @@ boot, by `src/config.ts`. Nothing else in the app reads `process.env`.
 - Real environment variables take precedence over `.env` values, so `PORT=4001 pnpm dev` works without editing the file.
 - A missing or malformed variable fails the boot with a readable message and exit code 1, rather than surfacing as a confusing runtime bug later.
 
-| Variable    | Required | Default       | Notes                                                     |
-| ----------- | -------- | ------------- | --------------------------------------------------------- |
-| `NODE_ENV`  | no       | `development` | `development` \| `test` \| `production`                   |
-| `PORT`      | yes      | —             | integer, 1–65535                                          |
-| `LOG_LEVEL` | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info` |
+| Variable       | Required | Default       | Notes                                                                                |
+| -------------- | -------- | ------------- | ------------------------------------------------------------------------------------ |
+| `NODE_ENV`     | no       | `development` | `development` \| `test` \| `production`                                              |
+| `PORT`         | yes      | —             | integer, 1–65535                                                                     |
+| `LOG_LEVEL`    | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info`                            |
+| `DATABASE_URL` | yes      | —             | `postgresql://user:pass@host:port/db`; validated only until 3.3 wires up a real pool |
 
 ## Logging
 
@@ -74,3 +75,13 @@ Every failure — thrown, rejected, or passed to `next(err)` — is rendered by 
 - `GET /readyz` — readiness: should traffic be routed here. `ready` once listening; `503 {"status":"draining"}` during boot and shutdown. A failing readiness check means "skip me, I'm not dead." Gains a DB ping at 3.3.
 - Both live at the app root (infra convention) and mount before the logging middleware, so probe heartbeats don't flood the request log.
 - **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.
+
+## Local development
+
+```bash
+cp .env.example .env                      # then set a real POSTGRES_PASSWORD
+pnpm db:up                                # Postgres in Docker, healthchecked
+cp apps/api/.env.example apps/api/.env    # then set DATABASE_URL to match
+pnpm install
+pnpm dev                                  # apps/api on :3000
+```
