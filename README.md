@@ -18,4 +18,14 @@ TypeScript everywhere (strict). React SPA on Vite with TanStack Router + Query, 
 
 ## Local development
 
-Nothing to run yet — the workspace scaffold lands in Phase 1.
+```bash
+cp .env.example .env                      # then set a real POSTGRES_PASSWORD
+cp apps/api/.env.example apps/api/.env    # then set DATABASE_URL to match
+pnpm install
+pnpm db:up                                # Postgres in Docker, healthchecked
+pnpm db:migrate                           # apply committed migrations
+pnpm db:seed                              # dev pet types + demo user (idempotent)
+pnpm dev                                  # apps/api on :3000
+```
+
+`pnpm db:down` stops the database container (data persists in its named volume). `pnpm db:reset` tears it down _with_ the volume — after a reset, run `pnpm db:migrate && pnpm db:seed` again for a clean, seeded slate.
