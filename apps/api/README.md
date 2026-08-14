@@ -85,5 +85,7 @@ cp .env.example .env                      # then set a real POSTGRES_PASSWORD
 pnpm db:up                                # Postgres in Docker, healthchecked
 cp apps/api/.env.example apps/api/.env    # then set DATABASE_URL to match
 pnpm install
+pnpm db:migrate                           # apply committed migrations
+pnpm db:seed                              # dev pet types + demo user
 pnpm dev                                  # apps/api on :3000
 ```
