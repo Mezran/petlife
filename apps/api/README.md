@@ -78,6 +78,19 @@ Every failure — thrown, rejected, or passed to `next(err)` — is rendered by 
 - Both live at the app root (infra convention) and mount before the logging middleware, so probe heartbeats don't flood the request log.
 - **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → db pool closes → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.
 
+## Validation
+
+Every request part a route consumes is parsed against a shared Zod schema before the handler runs — `src/middleware/validate.ts` is the one generic guard:
+
+```ts
+router.post("/", validate({ body: petCreateSchema }), handler);
+```
+
+- The schemas live in `@petlife/shared` (locked decision: one source of truth for api and web); routes only wire them to the middleware.
+- The middleware replaces `req.params` / `req.query` / `req.body` with the parsed result, so handlers see coerced, defaulted, **typed** values. (Express 5 made `req.query` a getter, so the middleware shadows it with an own property.)
+- A failed parse throws `ZodError`, which the error middleware (above) renders as a 400 problem with per-field `errors`.
+- `GET /api/v1/debug/validate?count=abc` exercises the path end to end in development.
+
 ## Local development
 
 ```bash

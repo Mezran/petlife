@@ -9,6 +9,9 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
 
+    // packages/shared ships source, so every consumer typechecks its imports
+    "allowImportingTsExtensions": true,
+
     // TS 6.0 defaults `types` to [] — opt into Node globals explicitly
     "types": ["node"],
 
