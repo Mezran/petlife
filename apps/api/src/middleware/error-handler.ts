@@ -3,18 +3,9 @@ import { STATUS_CODES } from "node:http";
 import type { ErrorRequestHandler } from "express";
 import * as z from "zod";
 
-import { AppError } from "../errors.ts";
+import type { Problem } from "@petlife/shared";
 
-// RFC 9457 problem + json shape every error response will use
-interface Problem {
-  type: string;
-  title: string;
-  status: number;
-  detail?: string;
-  instance: string;
-  requestId: string | number;
-  errors?: Record<string, string[] | undefined>;
-}
+import { AppError } from "../errors.ts";
 
 // body-parser and friends attach an http status to their errors
 // grab it without trusting anything else in the error.

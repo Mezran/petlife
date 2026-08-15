@@ -3,6 +3,7 @@ import * as z from "zod";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { AppError } from "../../errors.ts";
+import { validate } from "../../middleware/validate.ts";
 
 // dev only routes for testing error handling.
 
@@ -24,9 +25,8 @@ const validateQuery = z.object({
   count: z.coerce.number().int().min(1),
 });
 
-debugRouter.get("/validate", (req, res) => {
-  const query = validateQuery.parse(req.query);
-  res.json({ ok: true, query });
+debugRouter.get("/validate", validate({ query: validateQuery }), (req, res) => {
+  res.json({ ok: true, query: req.query });
 });
 
 debugRouter.get("/slow", async (_req, res) => {
