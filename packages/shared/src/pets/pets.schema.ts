@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { paginated } from "../pagination.schema.ts";
+import { pageQuerySchema, paginated } from "../pagination.schema.ts";
 
 // Wire contracts for the pets resource
 
@@ -104,6 +104,18 @@ export const petIdParamsSchema = z.object({
 });
 
 export type PetIdParams = z.infer<typeof petIdParamsSchema>;
+
+// section: list query
+
+// pagination plus a bounded sort vocabulary — sort keys are an enum, never
+// a raw column name from the client. Tie-breaking on id happens in the
+// repository (ADR-002's stable-order rule)
+export const petListQuerySchema = pageQuerySchema.extend({
+  sort: z.enum(["createdAt", "name"]).default("createdAt"),
+  order: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export type PetListQuery = z.infer<typeof petListQuerySchema>;
 
 // section: list response
 

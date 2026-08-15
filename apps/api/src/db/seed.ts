@@ -18,5 +18,9 @@ const userRows = await db.select().from(users);
 console.log(
   `seeded — pet_types: ${String(typeRows.length)}, users: ${String(userRows.length)}`,
 );
+// pet type ids on every run — the request collection needs one
+for (const t of typeRows) {
+  console.log(`  ${t.name}: ${t.id}`);
+}
 
 await closeDb();

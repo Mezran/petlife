@@ -13,6 +13,7 @@ import { errorHandler } from "./middleware/error-handler.ts";
 import { pingRouter } from "./api/ping/ping.router.ts";
 import { debugRouter } from "./api/debug/debug.router.ts";
 import { healthRouter } from "./api/health/health.router.ts";
+import { petsRouter } from "./api/pets/pets.router.ts";
 
 export const createApp = (): Express => {
   // app init
@@ -28,6 +29,7 @@ export const createApp = (): Express => {
 
   // api endpoints
   app.use("/api/v1", pingRouter);
+  app.use("/api/v1/pets", petsRouter);
   if (config.isDevelopment) {
     // exists only to exercise the error pipeline — never mounted in prod
     app.use("/api/v1/debug", debugRouter);

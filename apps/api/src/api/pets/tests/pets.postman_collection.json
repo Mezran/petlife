@@ -1,0 +1,452 @@
+{
+  "info": {
+    "_postman_id": "7c9d0e4a-2b1f-4c3d-9e8f-5a6b7c8d9e0f",
+    "name": "PetLife — pets CRUD",
+    "description": "Full CRUD against /api/v1/pets, happy path and failure cases.\n\nBefore the first run: set the `petTypeId` collection variable to a real id — `pnpm db:seed` prints them. `baseUrl` defaults to http://localhost:3000 (`pnpm dev`).\n\nRun the folders top to bottom (Run collection does this): Setup creates the pet the later requests use; Teardown deletes it and proves the 404.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "petTypeId", "value": "01a0010a-dd11-764c-a236-c41697046c6e" },
+    { "key": "petId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Create pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Location points at the new pet', () => {",
+                  "  pm.expect(pm.response.headers.get('Location')).to.include('/api/v1/pets/');",
+                  "});",
+                  "const pet = pm.response.json();",
+                  "pm.test('server filled id and timestamps', () => {",
+                  "  pm.expect(pet.id).to.be.a('string');",
+                  "  pm.expect(pet.createdAt).to.be.a('string');",
+                  "});",
+                  "pm.test('dateOfBirth round-tripped as an ISO date', () => {",
+                  "  pm.expect(pet.dateOfBirth).to.eql('2020-05-01');",
+                  "});",
+                  "pm.collectionVariables.set('petId', pet.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bruno\",\n  \"petTypeId\": \"{{petTypeId}}\",\n  \"sex\": \"male\",\n  \"dateOfBirth\": \"2020-05-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reads and updates",
+      "item": [
+        {
+          "name": "List pets (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('envelope has items + counts', () => {",
+                  "  pm.expect(list.items).to.be.an('array');",
+                  "  pm.expect(list.page).to.eql(1);",
+                  "  pm.expect(list.pageSize).to.eql(20);",
+                  "  pm.expect(list.totalItems).to.be.at.least(1);",
+                  "  pm.expect(list.totalPages).to.be.at.least(1);",
+                  "});",
+                  "pm.test('the created pet is in the list', () => {",
+                  "  const ids = list.items.map((p) => p.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('petId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get one pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('it is the created pet', () => {",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('petId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "Patch pet (notes + adoptionDate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const pet = pm.response.json();",
+                  "pm.test('patched fields landed', () => {",
+                  "  pm.expect(pet.notes).to.eql('Loves the park');",
+                  "  pm.expect(pet.adoptionDate).to.eql('2024-01-15');",
+                  "});",
+                  "pm.test('untouched fields survived', () => {",
+                  "  pm.expect(pet.name).to.eql('Bruno');",
+                  "  pm.expect(pet.dateOfBirth).to.eql('2020-05-01');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Loves the park\",\n  \"adoptionDate\": \"2024-01-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failure cases",
+      "item": [
+        {
+          "name": "Create with neither date — 400, both fields flagged",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('problem+json with both date fields in errors', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+                  "  const problem = pm.response.json();",
+                  "  pm.expect(problem.errors).to.have.property('dateOfBirth');",
+                  "  pm.expect(problem.errors).to.have.property('adoptionDate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ghost\",\n  \"petTypeId\": \"{{petTypeId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"]
+            }
+          }
+        },
+        {
+          "name": "Create with unknown key — 400 (strict DTO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "// unknown-key issues attach to the object root, not a field,",
+                  "// so errors can be empty here — the status is the assertion"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bruno\",\n  \"petTypeId\": \"{{petTypeId}}\",\n  \"date_of_birth\": \"2020-05-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"]
+            }
+          }
+        },
+        {
+          "name": "Create with unknown petTypeId — 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable Entity', () => pm.response.to.have.status(422));",
+                  "pm.test('detail names the problem', () => {",
+                  "  pm.expect(pm.response.json().detail).to.include('pet type');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nobody\",\n  \"petTypeId\": \"0198a3d2-7d5c-7a5e-8f5e-3b1a2c4d5e99\",\n  \"dateOfBirth\": \"2020-05-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"]
+            }
+          }
+        },
+        {
+          "name": "Get with malformed id — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('petId is the flagged field', () => {",
+                  "  pm.expect(pm.response.json().errors).to.have.property('petId');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/not-a-uuid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "not-a-uuid"]
+            }
+          }
+        },
+        {
+          "name": "Get unknown id — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('problem+json shape', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/0198a3d2-7d5c-7a5e-8f5e-3b1a2c4d5e99",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "pets",
+                "0198a3d2-7d5c-7a5e-8f5e-3b1a2c4d5e99"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Empty patch — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "Patch clearing both dates — 400 (service rule)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('detail explains the merged-row rule', () => {",
+                  "  pm.expect(pm.response.json().detail).to.include('clear both');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dateOfBirth\": null,\n  \"adoptionDate\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "List with page=0 — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('page is the flagged field', () => {",
+                  "  pm.expect(pm.response.json().errors).to.have.property('page');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets?page=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets"],
+              "query": [{ "key": "page", "value": "0" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teardown",
+      "item": [
+        {
+          "name": "Delete pet — 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));",
+                  "pm.test('no body', () => pm.expect(pm.response.text()).to.eql(''));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get after delete — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pets", "{{petId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

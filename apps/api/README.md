@@ -27,7 +27,7 @@ src/
 
 ## Conventions
 
-- **Feature modules.** Each feature lives in `src/api/<name>/` and owns its files: `<name>.router.ts` → `<name>.controller.ts` → `<name>.service.ts`. Layers are added when a feature has logic or data that needs them — ping is a router alone; pets (Phase 4) will carry all three.
+- **Feature modules.** Each feature lives in `src/api/<name>/` and owns its files: `<name>.router.ts` → `<name>.service.ts` → `<name>.repository.ts` — routes and status codes, business rules and row↔wire mapping, drizzle queries. Layers are added when a feature has logic or data that needs them — ping is a router alone, users is a repository alone; pets carries all three plus its request collection in `tests/`.
 - **Routing.** A feature exports an Express `Router`; `app.ts` mounts every router under the `/api/v1` prefix. Nothing registers routes anywhere else.
 - **app/index split.** `createApp()` builds the whole app without listening, so tests (4.3, Supertest) can exercise real routes without a port. `index.ts` binds the port and nothing more.
 - **Body parsing.** `express.json()` is app-level in `createApp()`, before all routers — every route sees `req.body` already parsed.
