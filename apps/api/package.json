@@ -22,8 +22,11 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/pg": "^8.21.0",
+    "@types/supertest": "^7.2.1",
     "drizzle-kit": "^0.31.10",
     "pino-pretty": "^13.1.3",
-    "tsx": "^4"
+    "supertest": "^7.2.2",
+    "tsx": "^4",
+    "vitest": "^4.1.10"
   }
 }

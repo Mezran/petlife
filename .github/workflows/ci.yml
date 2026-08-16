@@ -8,6 +8,22 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      # db for testing against
+      postgres:
+        image: postgres:18.4-trixie
+        env:
+          POSTGRES_USER: petlife
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: petlife
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U petlife"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
 
@@ -27,3 +43,6 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+        env:
+          # no .env in CI — the test setup derives petlife_test from this
+          DATABASE_URL: postgresql://petlife:changeme@localhost:5432/petlife
