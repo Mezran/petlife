@@ -91,6 +91,15 @@ router.post("/", validate({ body: petCreateSchema }), handler);
 - A failed parse throws `ZodError`, which the error middleware (above) renders as a 400 problem with per-field `errors`.
 - `GET /api/v1/debug/validate?count=abc` exercises the path end to end in development.
 
+## Testing
+
+Two tiers run under one `pnpm test` (Vitest projects): `packages/shared`'s unit parse tests, and this app's integration suite — real HTTP through `createApp()` via supertest, against a real Postgres.
+
+- **The test database is disposable and automatic.** `src/testing/global-setup.ts` derives `petlife_test` from `DATABASE_URL` (`.env` loaded by Node itself — still no dotenv), creates it if missing, and migrates it to head with the same committed migrations every environment runs. The dev database is never touched.
+- **Isolation is truncation:** every table is truncated before each test, and factories (`src/api/pets/tests/pets.factories.ts`) build exactly the rows a test needs. Test files run sequentially against the one test database.
+- **Bodies are asserted through the shared schemas** (`petSchema.parse(res.body)`), so every test doubles as a wire-contract check.
+- Locally the suite needs the db container up first: `pnpm db:up`. CI provides a `postgres` service container instead — same code path, `DATABASE_URL` supplied by the workflow.
+
 ## Local development
 
 ```bash
