@@ -3,6 +3,9 @@ import express, { type Express } from "express";
 // config
 import { config } from "./config.ts";
 
+// auth
+import { auth } from "./auth.ts";
+
 // middlewares
 import { requestId } from "./middleware/request-id.ts";
 import { httpLogger } from "./middleware/http-logger.ts";
@@ -14,6 +17,7 @@ import { pingRouter } from "./api/ping/ping.router.ts";
 import { debugRouter } from "./api/debug/debug.router.ts";
 import { healthRouter } from "./api/health/health.router.ts";
 import { petsRouter } from "./api/pets/pets.router.ts";
+import { toNodeHandler } from "better-auth/node";
 
 export const createApp = (): Express => {
   // app init
@@ -25,6 +29,7 @@ export const createApp = (): Express => {
   // middlewares
   app.use(requestId);
   app.use(httpLogger);
+  app.use("/api/auth/*splat", toNodeHandler(auth));
   app.use(express.json());
 
   // api endpoints
