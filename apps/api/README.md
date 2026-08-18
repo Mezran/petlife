@@ -43,12 +43,16 @@ boot, by `src/config.ts`. Nothing else in the app reads `process.env`.
 - Real environment variables take precedence over `.env` values, so `PORT=4001 pnpm dev` works without editing the file.
 - A missing or malformed variable fails the boot with a readable message and exit code 1, rather than surfacing as a confusing runtime bug later.
 
-| Variable       | Required | Default       | Notes                                                                                                                       |
-| -------------- | -------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`     | no       | `development` | `development` \| `test` \| `production`                                                                                     |
-| `PORT`         | yes      | —             | integer, 1–65535                                                                                                            |
-| `LOG_LEVEL`    | no       | by `NODE_ENV` | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info`                                                                   |
-| `DATABASE_URL` | yes      | —             | `postgresql://user:pass@host:port/db`; feeds the pg pool in `src/db/client.ts` — `/readyz` proves it with a live round-trip |
+| Variable | Required | Default | Notes |
+
+| Variable             | Required | Default                   | Notes                                                                                                                       |
+| -------------------- | -------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`           | no       | `development`             | `development` \| `test` \| `production`                                                                                     |
+| `PORT`               | yes      | —                         | integer, 1–65535                                                                                                            |
+| `LOG_LEVEL`          | no       | by `NODE_ENV`             | `fatal`…`silent`; dev→`debug`, test→`silent`, prod→`info`                                                                   |
+| `DATABASE_URL`       | yes      | —                         | `postgresql://user:pass@host:port/db`; feeds the pg pool in `src/db/client.ts` — `/readyz` proves it with a live round-trip |
+| `BETTER_AUTH_SECRET` | yes      | —                         | 32+ chars; signs session cookies. `openssl rand -base64 32`, one per environment                                            |
+| `BETTER_AUTH_URL`    | no       | `http://localhost:<PORT>` | the server's public origin; BetterAuth derives cookie security and trusted origins from it — set in production              |
 
 ## Logging
 
@@ -77,6 +81,16 @@ Every failure — thrown, rejected, or passed to `next(err)` — is rendered by 
 - `GET /readyz` — readiness: should traffic be routed here. `ready` once listening; `503 {"status":"draining"}` during boot and shutdown. A failing readiness check means "skip me, I'm not dead." Gains a DB ping at 3.3.
 - Both live at the app root (infra convention) and mount before the logging middleware, so probe heartbeats don't flood the request log.
 - **Shutdown** (`src/index.ts`): SIGTERM/SIGINT → readiness flips off → 3s drain window (pollers notice) → `server.close()` waits for in-flight requests → db pool closes → exit 0. A 10s deadline force-exits 1 if something wedges. A second signal kills immediately. Crash policy (2.4) is unchanged: bugs exit 1 with no drain.
+
+## Auth
+
+Sessions and credentials are owned by [BetterAuth](https://www.better-auth.com) (`src/auth.ts`), mounted in `app.ts` as a single handler for everything under `/api/auth` — before `express.json()`, because it parses its own request bodies.
+
+- **Model.** Cookie sessions (ADR-003): an opaque token in an `HttpOnly; SameSite=Lax; Path=/` cookie (`Secure` added automatically once the base URL is https), backed by a row in `sessions` — logout is a delete, revocation is immediate. Email+password credentials live in `accounts` (scrypt hashes, never plaintext); `verifications` waits for future flows.
+- **Schema.** BetterAuth's tables ride the normal migration workflow — `usePlural` maps its models onto `users`/`sessions`/`accounts`/`verifications`, and Postgres mints uuidv7 ids (`advanced.database.generateId: false`).
+- **Endpoints.** `POST /api/auth/sign-up/email`, `POST /api/auth/sign-in/email`, `GET /api/auth/get-session`, `POST /api/auth/sign-out`. Non-browser clients must send an `Origin` header on POSTs — requests carrying credentials without a trusted origin are rejected `403` (the library's CSRF check).
+- **Proof.** `src/api/auth/tests/auth.postman_collection.json` runs the whole lifecycle plus failure cases: `npx newman run src/api/auth/tests/auth.postman_collection.json` (server up).
+- The seeded demo user has no credential row — register through the collection to get a login-capable user.
 
 ## Validation
 

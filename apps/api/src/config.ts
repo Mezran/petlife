@@ -10,6 +10,8 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .optional(),
   DATABASE_URL: z.url({ protocol: /^postgresql$/ }),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -36,6 +38,10 @@ export const config = Object.freeze({
         ? "debug"
         : "info"),
   databaseUrl: env.DATABASE_URL,
+  betterAuthSecret: env.BETTER_AUTH_SECRET,
+  // the server's own public origin — BetterAuth derives cookie security from it
+  betterAuthUrl: env.BETTER_AUTH_URL ?? `http://localhost:${String(env.PORT)}`,
+  // derived
   isDevelopment: env.NODE_ENV === "development",
   isTest: env.NODE_ENV === "test",
   isProduction: env.NODE_ENV === "production",

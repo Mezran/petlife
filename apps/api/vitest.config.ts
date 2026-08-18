@@ -11,6 +11,7 @@ export default defineConfig({
       NODE_ENV: "test",
       PORT: "3999",
       DATABASE_URL: testDatabaseUrl,
+      BETTER_AUTH_SECRET: "jREBHCAdzGj0W5BAGWLQ3V2IhAxpxLDw3wDMicyK+g4=",
     },
     globalSetup: ["./src/testing/global-setup.ts"],
     setupFiles: ["./src/testing/setup.ts"],
