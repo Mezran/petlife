@@ -86,6 +86,12 @@ CREATE UNIQUE INDEX pet_types_name_lower_ux ON pet_types (lower(name));
 CREATE TABLE pets (
   id uuid PRIMARY KEY DEFAULT uuidv7(),
 
+  -- 5.3: ownership. The promised contrast to RESTRICT below — pets are owned
+  -- children, so deleting an account takes its pets with it.
+  owner_id uuid NOT NULL
+    CONSTRAINT pets_owner_id_fkey
+      REFERENCES users (id) ON DELETE CASCADE,
+
   -- RESTRICT, not CASCADE: deleting a catalog row must never vaporize pets —
   -- Postgres refuses while any pet still points at it. (CASCADE is for owned
   -- children, which is exactly what owner_id will be in 5.3; SET NULL would
@@ -128,3 +134,6 @@ CREATE TABLE pets (
 -- points at), never the referencing column. This index serves "every pet of
 -- type X" and keeps ON DELETE RESTRICT from scanning pets to find pointers.
 CREATE INDEX pets_pet_type_id_idx ON pets (pet_type_id);
+
+-- The hot path from 5.3 on: every pets query is owner-scoped.
+CREATE INDEX pets_owner_id_idx ON pets (owner_id);
