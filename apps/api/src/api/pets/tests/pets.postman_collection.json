@@ -7,13 +7,61 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3000" },
-    { "key": "petTypeId", "value": "01a0010a-dd11-764c-a236-c41697046c6e" },
+    { "key": "petTypeId", "value": "01a01a11-dc45-72d9-bcae-6d2ac7b10161" },
     { "key": "petId", "value": "" }
   ],
   "item": [
     {
       "name": "Setup",
       "item": [
+        {
+          "name": "Register (auth setup)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 5.3: pets routes sit behind requireAuth — a fresh user per run,",
+                  "// and the jar carries the session cookie into every request below",
+                  "pm.collectionVariables.set('email', `pets-collection+${Date.now()}@petlife.dev`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK — session cookie in the jar', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.cookies.has('better-auth.session_token')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              {
+                "key": "Origin",
+                "value": "{{baseUrl}}",
+                "description": "BetterAuth CSRF check: POSTs to /api/auth need a trusted Origin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-up/email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-up", "email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pets Collection User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"hunter2hunter2\"\n}"
+            }
+          }
+        },
         {
           "name": "Create pet",
           "event": [

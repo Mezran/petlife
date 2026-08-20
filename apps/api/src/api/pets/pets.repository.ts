@@ -1,11 +1,11 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client.ts";
 import { pets, petTypes } from "../../db/schema.ts";
 
 export type PetRow = typeof pets.$inferSelect;
 export type NewPetRow = typeof pets.$inferInsert;
-// the columns a PATCH may touch — id and timestamps stay out of reach
+// the columns a PATCH may touch — id, owner, and timestamps stay out of reach
 export type PetRowPatch = Partial<
   Pick<
     NewPetRow,
@@ -33,30 +33,46 @@ export const insertPet = async (data: NewPetRow): Promise<PetRow> => {
 
 export const updatePet = async (
   id: string,
+  ownerId: string,
   patch: PetRowPatch,
 ): Promise<PetRow | undefined> => {
   // updated_at is app-maintained (3.2 decision) — every update stamps it
   const rows = await db
     .update(pets)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(pets.id, id))
+    .where(and(eq(pets.id, id), eq(pets.ownerId, ownerId)))
     .returning();
   return rows.at(0);
 };
 
-export const deletePet = async (id: string): Promise<PetRow | undefined> => {
-  const rows = await db.delete(pets).where(eq(pets.id, id)).returning();
+export const deletePet = async (
+  id: string,
+  ownerId: string,
+): Promise<PetRow | undefined> => {
+  const rows = await db
+    .delete(pets)
+    .where(and(eq(pets.id, id), eq(pets.ownerId, ownerId)))
+    .returning();
   return rows.at(0);
 };
 
 // section: reads
 
-export const findPetById = async (id: string): Promise<PetRow | undefined> => {
-  const rows = await db.select().from(pets).where(eq(pets.id, id));
+// owner scoping lives here, in every query — another user's pet and a pet
+// that doesn't exist are the same answer by construction (ADR-004)
+export const findPetById = async (
+  id: string,
+  ownerId: string,
+): Promise<PetRow | undefined> => {
+  const rows = await db
+    .select()
+    .from(pets)
+    .where(and(eq(pets.id, id), eq(pets.ownerId, ownerId)));
   return rows.at(0);
 };
 
 export const listPets = async (options: {
+  ownerId: string;
   limit: number;
   offset: number;
   sort: PetSortKey;
@@ -68,10 +84,15 @@ export const listPets = async (options: {
   const rows = await db
     .select()
     .from(pets)
+    .where(eq(pets.ownerId, options.ownerId))
     .orderBy(direction(sortColumns[options.sort]), direction(pets.id))
     .limit(options.limit)
     .offset(options.offset);
-  const totals = await db.select({ total: count() }).from(pets);
+  // totals are scoped too — pagination math must never leak other owners
+  const totals = await db
+    .select({ total: count() })
+    .from(pets)
+    .where(eq(pets.ownerId, options.ownerId));
   return { rows, total: totals.at(0)?.total ?? 0 };
 };
 

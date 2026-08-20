@@ -73,6 +73,8 @@ export const pets = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
 
+    ownerId: uuid("owner_id").notNull(),
+
     petTypeId: uuid("pet_type_id").notNull(),
 
     name: text("name").notNull(),
@@ -92,10 +94,16 @@ export const pets = pgTable(
   },
   (table) => [
     foreignKey({
+      name: "pets_owner_id_fkey",
+      columns: [table.ownerId],
+      foreignColumns: [users.id],
+    }).onDelete("cascade"),
+    foreignKey({
       name: "pets_pet_type_id_fkey",
       columns: [table.petTypeId],
       foreignColumns: [petTypes.id],
     }).onDelete("restrict"),
+    index("pets_owner_id_idx").on(table.ownerId),
     index("pets_pet_type_id_idx").on(table.petTypeId),
     check("pets_name_not_blank_ck", sql`btrim(${table.name}) <> ''`),
     check("pets_sex_ck", sql`${table.sex} IN ('male', 'female', 'unknown')`),

@@ -52,9 +52,13 @@ const assertPetTypeExists = async (petTypeId: string): Promise<void> => {
 
 // section: use cases
 
-export const createPet = async (dto: PetCreate): Promise<Pet> => {
+export const createPet = async (
+  dto: PetCreate,
+  ownerId: string,
+): Promise<Pet> => {
   await assertPetTypeExists(dto.petTypeId);
   const row = await insertPet({
+    ownerId,
     name: dto.name,
     petTypeId: dto.petTypeId,
     sex: dto.sex,
@@ -65,16 +69,22 @@ export const createPet = async (dto: PetCreate): Promise<Pet> => {
   return toPet(row);
 };
 
-export const getPet = async (id: string): Promise<Pet> => {
-  const row = await findPetById(id);
+// the 404 is deliberate for both "no such pet" and "not your pet" — the
+// scoped query cannot tell them apart, and neither may a caller (ADR-004)
+export const getPet = async (id: string, ownerId: string): Promise<Pet> => {
+  const row = await findPetById(id, ownerId);
   if (row === undefined) {
     throw new NotFoundError(`No pet with id ${id}`);
   }
   return toPet(row);
 };
 
-export const listPets = async (query: PetListQuery): Promise<PetList> => {
+export const listPets = async (
+  query: PetListQuery,
+  ownerId: string,
+): Promise<PetList> => {
   const { rows, total } = await listPetRows({
+    ownerId,
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: query.sort,
@@ -89,8 +99,12 @@ export const listPets = async (query: PetListQuery): Promise<PetList> => {
   };
 };
 
-export const updatePet = async (id: string, patch: PetUpdate): Promise<Pet> => {
-  const current = await findPetById(id);
+export const updatePet = async (
+  id: string,
+  patch: PetUpdate,
+  ownerId: string,
+): Promise<Pet> => {
+  const current = await findPetById(id, ownerId);
   if (current === undefined) {
     throw new NotFoundError(`No pet with id ${id}`);
   }
@@ -115,7 +129,7 @@ export const updatePet = async (id: string, patch: PetUpdate): Promise<Pet> => {
     );
   }
 
-  const row = await updatePetRow(id, patch);
+  const row = await updatePetRow(id, ownerId, patch);
   if (row === undefined) {
     // vanished between the read and the write — still a 404
     throw new NotFoundError(`No pet with id ${id}`);
@@ -123,8 +137,8 @@ export const updatePet = async (id: string, patch: PetUpdate): Promise<Pet> => {
   return toPet(row);
 };
 
-export const deletePet = async (id: string): Promise<void> => {
-  const row = await deletePetRow(id);
+export const deletePet = async (id: string, ownerId: string): Promise<void> => {
+  const row = await deletePetRow(id, ownerId);
   if (row === undefined) {
     throw new NotFoundError(`No pet with id ${id}`);
   }

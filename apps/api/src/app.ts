@@ -11,6 +11,7 @@ import { requestId } from "./middleware/request-id.ts";
 import { httpLogger } from "./middleware/http-logger.ts";
 import { notFound } from "./middleware/not-found.ts";
 import { errorHandler } from "./middleware/error-handler.ts";
+import { requireAuth } from "./middleware/require-auth.ts";
 
 // import routers
 import { pingRouter } from "./api/ping/ping.router.ts";
@@ -34,7 +35,7 @@ export const createApp = (): Express => {
 
   // api endpoints
   app.use("/api/v1", pingRouter);
-  app.use("/api/v1/pets", petsRouter);
+  app.use("/api/v1/pets", requireAuth, petsRouter);
   if (config.isDevelopment) {
     // exists only to exercise the error pipeline — never mounted in prod
     app.use("/api/v1/debug", debugRouter);

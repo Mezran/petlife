@@ -9,6 +9,7 @@
 ```mermaid
 erDiagram
     pet_types ||--o{ pets : "classifies"
+    users ||--o{ pets : "owns (5.3)"
 
     users {
         uuid id PK "uuidv7()"
@@ -27,6 +28,7 @@ erDiagram
 
     pets {
         uuid id PK "uuidv7()"
+        uuid owner_id FK "ON DELETE CASCADE"
         uuid pet_type_id FK "ON DELETE RESTRICT"
         text name "not blank"
         text sex "male / female / unknown"
@@ -38,7 +40,7 @@ erDiagram
     }
 ```
 
-`users` has no edges yet. That is deliberate — see [What's deliberately missing](#whats-deliberately-missing).
+BetterAuth's `sessions` / `accounts` / `verifications` tables (5.2) also hang off `users` — they live in `apps/api/src/db/schema.ts` and are owned by the library, so this map keeps to the domain tables.
 
 ## Decisions
 
@@ -71,24 +73,21 @@ The DDL enforces what must never be false regardless of which code path writes: 
 
 ```mermaid
 erDiagram
-    users ||..o{ pets : "owner_id — arrives 5.3"
-    users ||..o{ session : "BetterAuth, 5.2"
-    users ||..o{ account : "BetterAuth, 5.2 — password hashes live here"
     pet_types ||..o{ field_definitions : "custom fields, 7.1"
 ```
 
-- **`pets.owner_id`** (`uuid NOT NULL REFERENCES users ON DELETE CASCADE`, plus its index) waits for 5.3 so Phase 4 can build and test CRUD before login exists. CASCADE there against RESTRICT on `pet_type_id` is the deliberate contrast: deleting an account takes its pets with it; deleting a catalog row can never take pets down.
-- **BetterAuth's tables** (`session`, `account`, `verification`, plus `emailVerified`/`image` on the user model) arrive via its own generated migration in 5.2. `users` here is the minimal compatible core: BetterAuth can map its user model onto a table named `users` (`modelName`) and can leave id generation to the database (`advanced.database.generateId: false`), so these uuid keys stay viable. The exact reconciliation is 5.2's call.
-- **No password column, ever.** BetterAuth keeps credential hashes in its `account` table; a `users.password_hash` modeled now would be a trap.
+- ~~`pets.owner_id`~~ **Landed at 5.3** exactly as promised: `uuid NOT NULL REFERENCES users ON DELETE CASCADE`, plus `pets_owner_id_idx`. CASCADE against RESTRICT on `pet_type_id` is the deliberate contrast: deleting an account takes its pets with it; deleting a catalog row can never take pets down.
+- ~~BetterAuth's tables~~ **Landed at 5.2** as `sessions` / `accounts` / `verifications` plus `email_verified`/`image` on `users` — through the normal migration workflow, mapped by `usePlural`, ids minted by the database (`advanced.database.generateId: false`).
+- **No password column on `users`, ever.** BetterAuth keeps credential hashes in its `accounts` table; a `users.password_hash` modeled here would be a trap.
 - **Custom fields** (`field_definitions` rows per pet type, a `custom_values` JSONB column on pets, and its GIN index) are the Phase 7 signature feature — 7.1 designs them with the care they deserve.
 
 ## Access patterns the indexes anticipate
 
-| Query the app will run                             | Served by                 |
-| -------------------------------------------------- | ------------------------- |
-| Log in / find account by email                     | `users_email_lower_ux`    |
-| List a user's pets — the hot path                  | `pets_owner_id_idx` (5.3) |
-| Pets of a type; `ON DELETE RESTRICT` pointer check | `pets_pet_type_id_idx`    |
-| Pet detail by id                                   | `pets_pkey`               |
+| Query the app will run                             | Served by              |
+| -------------------------------------------------- | ---------------------- |
+| Log in / find account by email                     | `users_email_lower_ux` |
+| List a user's pets — the hot path                  | `pets_owner_id_idx`    |
+| Pets of a type; `ON DELETE RESTRICT` pointer check | `pets_pet_type_id_idx` |
+| Pet detail by id                                   | `pets_pkey`            |
 
-Postgres indexes the _referenced_ side of every FK automatically (it's a primary key) but never the referencing column — hence the explicit index on `pets.pet_type_id`, and one more on `pets.owner_id` the day it exists.
+Postgres indexes the _referenced_ side of every FK automatically (it's a primary key) but never the referencing column — hence the explicit indexes on `pets.pet_type_id` and `pets.owner_id`.
