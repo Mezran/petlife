@@ -26,6 +26,7 @@ pnpm db:up                                # Postgres in Docker, healthchecked
 pnpm db:migrate                           # apply committed migrations
 pnpm db:seed                              # dev pet types + demo user (idempotent)
 pnpm dev                                  # apps/api on :3000
+pnpm dev:web                              # apps/web on :5173, /api proxied to :3000
 ```
 
 `pnpm db:down` stops the database container (data persists in its named volume). `pnpm db:reset` tears it down _with_ the volume — after a reset, run `pnpm db:migrate && pnpm db:seed` again for a clean, seeded slate.
