@@ -21,3 +21,9 @@ export class NotFoundError extends AppError {
     super(404, "Not Found", detail, options);
   }
 }
+
+export class UnauthorizedError extends AppError {
+  constructor(details?: string, options?: { cause?: unknown }) {
+    super(401, "Unauthorized", details, options);
+  }
+}

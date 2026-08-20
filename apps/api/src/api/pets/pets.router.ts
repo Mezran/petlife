@@ -7,6 +7,7 @@ import {
   petUpdateSchema,
 } from "@petlife/shared";
 
+import { authedUser } from "../../middleware/require-auth.ts";
 import { validate } from "../../middleware/validate.ts";
 import {
   createPet,
@@ -20,7 +21,7 @@ export const petsRouter = Router();
 
 // POST /api/v1/pets — 201 + Location pointing at the new resource
 petsRouter.post("/", validate({ body: petCreateSchema }), async (req, res) => {
-  const pet = await createPet(req.body);
+  const pet = await createPet(req.body, authedUser(req).id);
   res.location(`${req.baseUrl}/${pet.id}`).status(201).json(pet);
 });
 
@@ -29,7 +30,7 @@ petsRouter.get(
   "/",
   validate({ query: petListQuerySchema }),
   async (req, res) => {
-    res.json(await listPets(req.query));
+    res.json(await listPets(req.query, authedUser(req).id));
   },
 );
 
@@ -38,7 +39,7 @@ petsRouter.get(
   "/:petId",
   validate({ params: petIdParamsSchema }),
   async (req, res) => {
-    res.json(await getPet(req.params.petId));
+    res.json(await getPet(req.params.petId, authedUser(req).id));
   },
 );
 
@@ -47,7 +48,7 @@ petsRouter.patch(
   "/:petId",
   validate({ params: petIdParamsSchema, body: petUpdateSchema }),
   async (req, res) => {
-    res.json(await updatePet(req.params.petId, req.body));
+    res.json(await updatePet(req.params.petId, req.body, authedUser(req).id));
   },
 );
 
@@ -56,7 +57,7 @@ petsRouter.delete(
   "/:petId",
   validate({ params: petIdParamsSchema }),
   async (req, res) => {
-    await deletePet(req.params.petId);
+    await deletePet(req.params.petId, authedUser(req).id);
     res.status(204).end();
   },
 );
