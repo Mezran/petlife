@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — Tailwind v4 is configured here, in CSS. Every token in
+ * @theme becomes a CSS variable AND generates utilities: the brand ramp
+ * gives bg-brand-600 / text-brand-700 / border-brand-200, the spacing
+ * token gives p-gutter / px-gutter / gap-gutter, the text token gives
+ * text-display. Tailwind's defaults stay available alongside.
+ */
+@theme {
+  /* Color: the PetLife brand ramp, oklch so the lightness steps are
+     perceptually even. Tune hue/chroma to taste — one edit re-skins
+     every brand-* utility. */
+  --color-brand-50: oklch(0.98 0.02 170);
+  --color-brand-100: oklch(0.95 0.04 170);
+  --color-brand-200: oklch(0.9 0.07 170);
+  --color-brand-300: oklch(0.84 0.1 170);
+  --color-brand-400: oklch(0.76 0.13 170);
+  --color-brand-500: oklch(0.68 0.14 170);
+  --color-brand-600: oklch(0.58 0.13 170);
+  --color-brand-700: oklch(0.5 0.11 170);
+  --color-brand-800: oklch(0.42 0.09 170);
+  --color-brand-900: oklch(0.36 0.07 170);
+  --color-brand-950: oklch(0.26 0.05 170);
+
+  /* Spacing: the one page gutter shared by header and content */
+  --spacing-gutter: 1.5rem;
+
+  /* Type scale: display size for the wordmark and page titles */
+  --text-display: 1.5rem;
+  --text-display--line-height: 2rem;
+  --text-display--font-weight: 700;
+}
+
+@layer base {
+  /* Base UI portals popups into <body>; isolating the app root keeps them
+     above all page content without z-index wars (Base UI quick start) */
+  #root {
+    isolation: isolate;
+  }
+
+  /* Base UI: iOS 26 Safari needs this so backdrops render correctly
+     after scrolling (Base UI quick start) */
+  body {
+    position: relative;
+  }
+}
