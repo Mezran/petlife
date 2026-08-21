@@ -7,7 +7,7 @@ import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default defineConfig(
   // Generated output is never linted (node_modules is ignored by default)
-  globalIgnores(["**/dist/", "**/coverage/"]),
+  globalIgnores(["**/dist/", "**/coverage/", "**/routeTree.gen.ts"]),
 
   // All TypeScript: full type-aware strictness via each package's tsconfig
   {
@@ -30,6 +30,30 @@ export default defineConfig(
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
+  },
+  // TanStack Router route files play by the router plugin's rules, not
+  // react-refresh's: components must stay non-exported for automatic code
+  // splitting to extract them (verified: exporting them yields one fat
+  // bundle), and the plugin implements its own HMR for route modules — so
+  // only-export-components is off here. Guards throw the Response-shaped
+  // `Redirect`, which only-throw-error is taught to allow.
+  {
+    files: ["apps/web/src/routes/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+      "@typescript-eslint/only-throw-error": [
+        "error",
+        {
+          allow: [
+            {
+              from: "package",
+              name: "Redirect",
+              package: "@tanstack/router-core",
+            },
+          ],
+        },
+      ],
+    },
   },
 
   // Plain JS at the root (this file, prettier.config.js): baseline rules,
