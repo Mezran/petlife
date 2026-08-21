@@ -3,3 +3,4 @@ node_modules
 dist
 coverage
 apps/api/src/db/migrations
+apps/web/src/routeTree.gen.ts

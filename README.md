@@ -25,7 +25,7 @@ pnpm install
 pnpm db:up                                # Postgres in Docker, healthchecked
 pnpm db:migrate                           # apply committed migrations
 pnpm db:seed                              # dev pet types + demo user (idempotent)
-pnpm dev                                  # apps/api on :3000
+pnpm dev:api                              # apps/api on :3000
 pnpm dev:web                              # apps/web on :5173, /api proxied to :3000
 ```
 

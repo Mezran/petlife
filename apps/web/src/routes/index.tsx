@@ -1,10 +1,10 @@
 import { Button } from "@base-ui/react/button";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 // ---------------------------------------------------------------------------
-// api status card — proves the dev proxy end to end (6.1's Done-when).
-// Plain fetch on purpose: TanStack Query takes over server state in 6.3,
-// and this card is the before-picture it will replace.
+// api status card — moved verbatim from the 6.1 App.tsx. Still plain fetch
+// on purpose: TanStack Query takes over server state in 6.3.
 // ---------------------------------------------------------------------------
 
 type PingState =
@@ -69,38 +69,16 @@ const ApiStatusCard = () => {
 };
 
 // ---------------------------------------------------------------------------
-// app shell — header / nav / content (the frame every later topic fills in)
+// landing page — the "/" index route
 // ---------------------------------------------------------------------------
 
-export const App = () => {
-  return (
-    <div className="min-h-dvh bg-brand-50 text-brand-950">
-      <header className="border-b border-brand-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-gutter py-4">
-          <h1 className="text-display text-brand-700">PetLife</h1>
-          <nav aria-label="Main">
-            {/* placeholders — real routes arrive with TanStack Router in 6.2,
-                and the wireframes' account menu with auth in 6.4 */}
-            <ul className="flex items-center gap-gutter font-medium">
-              <li>
-                <a className="hover:text-brand-600" href="/">
-                  Pets
-                </a>
-              </li>
-              <li>
-                <a className="hover:text-brand-600" href="/">
-                  Log in
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </header>
+const HomePage = () => (
+  <>
+    <h2 className="text-display mb-gutter">Welcome</h2>
+    <ApiStatusCard />
+  </>
+);
 
-      <main className="mx-auto max-w-5xl p-gutter">
-        <h2 className="text-display mb-gutter">Welcome</h2>
-        <ApiStatusCard />
-      </main>
-    </div>
-  );
-};
+export const Route = createFileRoute("/")({
+  component: HomePage,
+});
